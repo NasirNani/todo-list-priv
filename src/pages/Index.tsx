@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from 'react-router-dom';
-import PullToRefresh from 'react-pull-to-refresh'; // FIX: Changed back to default import
+import PullToRefresh from 'react-pull-to-refresh';
 import { TodoForm } from "@/components/TodoForm";
 import { TodoList } from "@/components/TodoList";
 import { SharedTodoList } from "@/components/SharedTodoList";
