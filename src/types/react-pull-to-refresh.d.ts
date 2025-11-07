@@ -12,6 +12,6 @@ declare module 'react-pull-to-refresh' {
     isRefreshing?: boolean;
   }
 
-  const PullToRefresh: React.FC<PullToRefreshProps>;
-  export default PullToRefresh;
+  // Changed from 'export default' to 'export const'
+  export const PullToRefresh: React.FC<PullToRefreshProps>;
 }
