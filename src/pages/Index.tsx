@@ -80,26 +80,6 @@ const Index = () => {
     }
   }, [loading, fetchTodos, fetchFriends]);
 
-  useEffect(() => {
-    // Set up a real-time subscription to the todos table
-    const channel = supabase
-      .channel('todos')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'todos' },
-        (payload) => {
-          // When a change occurs, re-fetch the todos
-          fetchTodos();
-        }
-      )
-      .subscribe();
-
-    // Cleanup subscription on component unmount
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [supabase, fetchTodos]);
-
   const addTodo = async (text: string, friendId?: string) => {
     if (!user) {
         showError("You must be logged in to add a todo.");
@@ -117,8 +97,9 @@ const Index = () => {
     if (error) {
       console.error("Error adding todo:", error);
       showError("Failed to add todo.");
+    } else {
+      fetchTodos();
     }
-    // No need to call fetchTodos here, the real-time subscription will handle it
   };
 
   const toggleTodo = async (id: string) => {
@@ -133,8 +114,9 @@ const Index = () => {
     if (error) {
       console.error("Error updating todo:", error);
       showError("Failed to update todo.");
+    } else {
+      fetchTodos();
     }
-    // No need to call fetchTodos here, the real-time subscription will handle it
   };
 
   const deleteTodo = async (id: string) => {
@@ -144,7 +126,6 @@ const Index = () => {
       console.error("Error deleting todo:", error);
       showError("Failed to delete todo.");
     } else {
-      // Optimistic update for smoother UX
       setMyTodos(myTodos.filter((todo) => todo.id !== id));
       showError("Todo removed.");
     }
