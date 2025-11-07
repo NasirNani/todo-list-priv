@@ -68,55 +68,64 @@ export const FriendsManager = ({ onFriendshipChange }: FriendsManagerProps) => {
 
     setIsSubmitting(true);
 
-    // 1. Find the target user's profile ID by email
-    const { data: targetProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', email) // Assuming email is available in profiles table (it's not, but we'll use a placeholder for now)
-      .single();
+    try {
+      // 1. Use the Edge Function to get the friend's ID from their email
+      const { data, error: functionError } = await supabase.functions.invoke('get-user-by-email', {
+        body: { email },
+      });
 
-    // Since we don't have email in the profiles table, we need to find the user ID via auth.users.
-    // Supabase RLS prevents querying auth.users directly. 
-    // For simplicity, let's assume the user enters the friend's UUID for now, or we need a public profile lookup function.
-    // Since we just created the profiles table, let's assume the user enters the friend's ID for testing.
-    
-    // In a real app, we'd use an Edge Function to look up user by email securely.
-    // For now, let's assume the user enters the friend's ID directly into the email field.
-    const friendId = email; 
+      if (functionError) {
+        throw new Error(functionError.message);
+      }
+      
+      const friendId = data.userId;
 
-    if (friendId === currentUserId) {
-        showError("You cannot add yourself as a friend.");
+      if (!friendId) {
+        showError("User with that email was not found.");
         setIsSubmitting(false);
         return;
-    }
+      }
 
-    // 2. Check if friendship already exists (pending or accepted)
-    const { data: existingFriendship } = await supabase
-        .from('friends')
-        .select('id, status')
-        .or(`and(user_id.eq.${currentUserId},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${currentUserId})`)
-        .limit(1);
+      if (friendId === currentUserId) {
+          showError("You cannot add yourself as a friend.");
+          setIsSubmitting(false);
+          return;
+      }
 
-    if (existingFriendship && existingFriendship.length > 0) {
-        showError(`Friendship already exists with status: ${existingFriendship[0].status}`);
-        setIsSubmitting(false);
-        return;
-    }
+      // 2. Check if friendship already exists (pending or accepted)
+      const { data: existingFriendship } = await supabase
+          .from('friends')
+          .select('id, status')
+          .or(`and(user_id.eq.${currentUserId},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${currentUserId})`)
+          .limit(1);
 
-    // 3. Send request
-    const { error: insertError } = await supabase
-      .from("friends")
-      .insert([{ user_id: currentUserId, friend_id: friendId, status: 'pending' }]);
+      if (existingFriendship && existingFriendship.length > 0) {
+          showError(`Friendship already exists with status: ${existingFriendship[0].status}`);
+          setIsSubmitting(false);
+          return;
+      }
 
-    if (insertError) {
-      console.error("Error sending friend request:", insertError);
-      showError("Failed to send friend request. Check if the ID is valid.");
-    } else {
+      // 3. Send request
+      const { error: insertError } = await supabase
+        .from("friends")
+        .insert([{ user_id: currentUserId, friend_id: friendId, status: 'pending' }]);
+
+      if (insertError) {
+        throw insertError;
+      }
+      
       showSuccess("Friend request sent!");
       setEmail("");
-    }
 
-    setIsSubmitting(false);
+    } catch (error: any) {
+        console.error("Error sending friend request:", error);
+        const errorMessage = error.message.includes("User not found") 
+            ? "User with that email was not found."
+            : "Failed to send friend request.";
+        showError(errorMessage);
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   const handleUpdateFriendship = async (friendshipId: string, newStatus: 'accepted' | 'blocked') => {
@@ -156,12 +165,12 @@ export const FriendsManager = ({ onFriendshipChange }: FriendsManagerProps) => {
         {/* Add Friend Form */}
         <form onSubmit={handleSendRequest} className="flex space-x-2">
           <Input
-            type="text"
-            placeholder="Enter Friend's User ID (UUID)"
+            type="email"
+            placeholder="Enter Friend's Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            aria-label="Friend User ID"
+            aria-label="Friend's Email"
           />
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4 mr-2" />}
