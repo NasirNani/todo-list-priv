@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import type { Session } from "@supabase/supabase-js";
+import { Spinner } from "./Spinner";
 
 const Layout = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -34,7 +35,7 @@ const Layout = () => {
   };
 
   if (!session) {
-    return null; // Or a loading spinner
+    return <Spinner />;
   }
 
   return (
