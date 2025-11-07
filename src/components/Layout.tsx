@@ -7,16 +7,20 @@ import { Spinner } from "./Spinner";
 
 const Layout = () => {
   const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
+    // 1. Check initial session status
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      setIsLoading(false); // Finished checking
       if (!session) {
         navigate("/login");
       }
     });
 
+    // 2. Set up listener for future changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -34,7 +38,12 @@ const Layout = () => {
     navigate("/login");
   };
 
+  if (isLoading) {
+    return <Spinner />;
+  }
+
   if (!session) {
+    // Fallback: If we finished loading and still have no session, we should have been redirected.
     return <Spinner />;
   }
 
