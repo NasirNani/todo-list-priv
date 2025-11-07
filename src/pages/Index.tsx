@@ -139,8 +139,16 @@ const Index = () => {
     return <Spinner />;
   }
 
-  const myTodos = todos.filter(t => t.user_id === profile?.id);
-  const sharedTodos = todos.filter(t => t.user_id !== profile?.id);
+  if (!profile) {
+    return (
+      <div className="text-center p-8 text-muted-foreground">
+        Could not load your profile. You might need to log in again.
+      </div>
+    );
+  }
+
+  const myTodos = todos.filter(t => t.user_id === profile.id);
+  const sharedTodos = todos.filter(t => t.user_id !== profile.id);
 
   return (
     <main className="min-h-screen bg-background flex flex-col lg:flex-row items-start justify-center p-4 gap-6">
@@ -157,7 +165,7 @@ const Index = () => {
             <TodoForm 
                 addTodo={addTodo} 
                 friends={friends} 
-                currentUserId={profile?.id || ''}
+                currentUserId={profile.id}
             />
             
             <Tabs defaultValue="mine" className="w-full">
