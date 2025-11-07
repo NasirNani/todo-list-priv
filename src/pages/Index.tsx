@@ -9,23 +9,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { Todo } from "@/types";
-import { showError, showSuccess } from "@/utils/toast";
+import type { Todo, Profile } from "@/types";
+import { showError } from "@/utils/toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
 
 const Index = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
-  const { toast } = useToast();
+  const [friends, setFriends] = useState<Profile[]>([]);
 
   const fetchTodos = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from("todos")
-      .select("*")
-      .order("created_at", { ascending: true });
+    const { data, error } = await supabase.rpc('get_todos');
 
     if (error) {
       console.error("Error fetching todos:", error);
@@ -35,28 +28,40 @@ const Index = () => {
     }
   }, []);
 
+  const fetchFriends = useCallback(async () => {
+    const { data, error } = await supabase.rpc('get_friends');
+    if (error) {
+      console.error("Error fetching friends:", error);
+    } else if (data) {
+      setFriends(data);
+    }
+  }, []);
+
   useEffect(() => {
     fetchTodos();
-  }, [fetchTodos]);
+    fetchFriends();
+  }, [fetchTodos, fetchFriends]);
 
-  const addTodo = async (text: string) => {
+  const addTodo = async (text: string, friendId?: string) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
         showError("You must be logged in to add a todo.");
         return;
     }
 
-    const { data, error } = await supabase
+    const newTodo = friendId
+      ? { text, user_id: friendId, shared_by_user_id: user.id }
+      : { text, user_id: user.id };
+
+    const { error } = await supabase
       .from("todos")
-      .insert([{ text, user_id: user.id }])
-      .select();
+      .insert([newTodo]);
 
     if (error) {
       console.error("Error adding todo:", error);
       showError("Failed to add todo.");
-    } else if (data) {
-      setTodos([...todos, ...data]);
-      // showSuccess is already in TodoForm
+    } else {
+      fetchTodos();
     }
   };
 
@@ -64,19 +69,16 @@ const Index = () => {
     const todoToUpdate = todos.find((todo) => todo.id === id);
     if (!todoToUpdate) return;
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("todos")
       .update({ completed: !todoToUpdate.completed })
-      .match({ id })
-      .select();
+      .match({ id });
 
     if (error) {
       console.error("Error updating todo:", error);
       showError("Failed to update todo.");
-    } else if (data) {
-      setTodos(
-        todos.map((todo) => (todo.id === id ? data[0] : todo))
-      );
+    } else {
+      fetchTodos();
     }
   };
 
@@ -102,7 +104,7 @@ const Index = () => {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center space-y-4">
-            <TodoForm addTodo={addTodo} />
+            <TodoForm addTodo={addTodo} friends={friends} />
             <TodoList
               todos={todos}
               toggleTodo={toggleTodo}

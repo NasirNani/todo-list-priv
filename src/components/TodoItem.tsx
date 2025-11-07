@@ -21,14 +21,21 @@ export const TodoItem = ({ todo, toggleTodo, deleteTodo }: TodoItemProps) => {
           onCheckedChange={() => toggleTodo(todo.id)}
           aria-label={`Mark ${todo.text} as ${todo.completed ? 'incomplete' : 'complete'}`}
         />
-        <label
-          htmlFor={`todo-${todo.id}`}
-          className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${
-            todo.completed ? "line-through text-muted-foreground" : ""
-          }`}
-        >
-          {todo.text}
-        </label>
+        <div>
+          <label
+            htmlFor={`todo-${todo.id}`}
+            className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${
+              todo.completed ? "line-through text-muted-foreground" : ""
+            }`}
+          >
+            {todo.text}
+          </label>
+          {todo.shared_by_user_id && (
+            <p className="text-xs text-muted-foreground">
+              From: {todo.shared_by_first_name} {todo.shared_by_last_name}
+            </p>
+          )}
+        </div>
       </div>
       <Button variant="ghost" size="icon" onClick={() => deleteTodo(todo.id)} aria-label={`Delete todo: ${todo.text}`}>
         <Trash2 className="h-4 w-4" />
