@@ -1,9 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, Link } from "react-router-dom";
 import { Button } from "./ui/button";
 import type { Session } from "@supabase/supabase-js";
 import { Spinner } from "./Spinner";
+import { Users } from "lucide-react";
 
 const Layout = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -11,16 +12,14 @@ const Layout = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // 1. Check initial session status
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setIsLoading(false); // Finished checking
+      setIsLoading(false);
       if (!session) {
         navigate("/login");
       }
     });
 
-    // 2. Set up listener for future changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -43,15 +42,24 @@ const Layout = () => {
   }
 
   if (!session) {
-    // Fallback: If we finished loading and still have no session, we should have been redirected.
     return <Spinner />;
   }
 
   return (
     <div>
       <header className="p-4 flex justify-between items-center border-b">
-        <h1 className="text-xl font-bold">Todo App</h1>
-        <Button onClick={handleSignOut}>Sign Out</Button>
+        <Link to="/" className="text-xl font-bold">
+          Todo App
+        </Link>
+        <div className="flex items-center space-x-4">
+          <Link to="/friends">
+            <Button variant="ghost" size="icon">
+              <Users className="h-5 w-5" />
+              <span className="sr-only">Friends</span>
+            </Button>
+          </Link>
+          <Button onClick={handleSignOut}>Sign Out</Button>
+        </div>
       </header>
       <main>
         <Outlet />
