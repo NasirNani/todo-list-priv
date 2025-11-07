@@ -7,8 +7,8 @@ import type { Todo } from "@/types";
 
 interface TodoItemProps {
   todo: Todo;
-  toggleTodo: (id: number) => void;
-  deleteTodo: (id: number) => void;
+  toggleTodo: (id: string) => void;
+  deleteTodo: (id: string) => void;
 }
 
 export const TodoItem = ({ todo, toggleTodo, deleteTodo }: TodoItemProps) => {
