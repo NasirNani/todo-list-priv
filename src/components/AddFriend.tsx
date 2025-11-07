@@ -65,7 +65,7 @@ const AddFriend = () => {
         <form onSubmit={handleSearch} className="flex items-center space-x-2 mb-4">
           <Input
             type="text"
-            placeholder="Search by name..."
+            placeholder="Search by name or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
