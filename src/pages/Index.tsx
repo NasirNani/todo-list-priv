@@ -1,18 +1,62 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+"use client";
 
-import { MadeWithDyad } from "@/components/made-with-dyad";
+import { useState } from "react";
+import { TodoForm } from "@/components/TodoForm";
+import { TodoList } from "@/components/TodoList";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import type { Todo } from "@/types";
+import { showError, showSuccess } from "@/utils/toast";
 
 const Index = () => {
+  const [todos, setTodos] = useState<Todo[]>([]);
+
+  const addTodo = (text: string) => {
+    const newTodo: Todo = {
+      id: Date.now(),
+      text,
+      completed: false,
+    };
+    setTodos([...todos, newTodo]);
+  };
+
+  const toggleTodo = (id: number) => {
+    setTodos(
+      todos.map((todo) =>
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo,
+      ),
+    );
+  };
+
+  const deleteTodo = (id: number) => {
+    setTodos(todos.filter((todo) => todo.id !== id));
+    showError("Todo removed.");
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">
-          Start building your amazing project here!
-        </p>
-      </div>
-      <MadeWithDyad />
-    </div>
+    <main className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-center text-2xl font-bold tracking-tight">
+            My Todo List
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center space-y-4">
+            <TodoForm addTodo={addTodo} />
+            <TodoList
+              todos={todos}
+              toggleTodo={toggleTodo}
+              deleteTodo={deleteTodo}
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </main>
   );
 };
 
