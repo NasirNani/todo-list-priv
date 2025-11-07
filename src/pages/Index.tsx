@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from 'react-router-dom';
+import PullToRefresh from 'react-pull-to-refresh';
 import { TodoForm } from "@/components/TodoForm";
 import { TodoList } from "@/components/TodoList";
 import { SharedTodoList } from "@/components/SharedTodoList";
@@ -11,6 +12,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 import type { Todo, Profile } from "@/types";
 import { showError } from "@/utils/toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +23,7 @@ import type { User } from "@supabase/supabase-js";
 const Index = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [myTodos, setMyTodos] = useState<Todo[]>([]);
   const [sharedByMeTodos, setSharedByMeTodos] = useState<Todo[]>([]);
@@ -69,16 +73,22 @@ const Index = () => {
     }
   }, []);
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await Promise.all([fetchTodos(), fetchFriends()]);
+    setIsRefreshing(false);
+  };
+
   useEffect(() => {
     checkProfile();
   }, [checkProfile]);
 
   useEffect(() => {
-    if (!loading) {
+    if (!loading && user) {
       fetchTodos();
       fetchFriends();
     }
-  }, [loading, fetchTodos, fetchFriends]);
+  }, [loading, user, fetchTodos, fetchFriends]);
 
   const addTodo = async (text: string, friendId?: string) => {
     if (!user) {
@@ -135,27 +145,36 @@ const Index = () => {
     return <Spinner />;
   }
 
+  const isTouchDevice = 'ontouchstart' in window;
+
   return (
-    <main className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-center text-2xl font-bold tracking-tight">
-            My Todo List
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center space-y-4">
-            <TodoForm addTodo={addTodo} friends={friends} />
-            <TodoList
-              todos={myTodos}
-              toggleTodo={toggleTodo}
-              deleteTodo={deleteTodo}
-            />
-            <SharedTodoList todos={sharedByMeTodos} />
-          </div>
-        </CardContent>
-      </Card>
-    </main>
+    <PullToRefresh onRefresh={handleRefresh} disabled={!isTouchDevice}>
+      <main className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-lg">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-2xl font-bold tracking-tight">
+              My Todo List
+            </CardTitle>
+            {!isTouchDevice && (
+              <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={isRefreshing}>
+                <RefreshCw className={`h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col items-center space-y-4">
+              <TodoForm addTodo={addTodo} friends={friends} />
+              <TodoList
+                todos={myTodos}
+                toggleTodo={toggleTodo}
+                deleteTodo={deleteTodo}
+              />
+              <SharedTodoList todos={sharedByMeTodos} />
+            </div>
+          </CardContent>
+        </Card>
+      </main>
+    </PullToRefresh>
   );
 };
 
