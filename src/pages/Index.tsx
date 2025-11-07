@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from 'react-router-dom';
 import { TodoForm } from "@/components/TodoForm";
 import { TodoList } from "@/components/TodoList";
 import {
@@ -12,10 +13,33 @@ import {
 import type { Todo, Profile } from "@/types";
 import { showError } from "@/utils/toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Spinner } from "@/components/Spinner";
 
 const Index = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [todos, setTodos] = useState<Todo[]>([]);
   const [friends, setFriends] = useState<Profile[]>([]);
+
+  const checkProfile = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('first_name')
+      .eq('id', user.id)
+      .single();
+
+    if (error || !profile || !profile.first_name) {
+      navigate('/profilesetup');
+    } else {
+      setLoading(false);
+    }
+  }, [navigate]);
 
   const fetchTodos = useCallback(async () => {
     const { data, error } = await supabase.rpc('get_todos');
@@ -38,9 +62,15 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    fetchTodos();
-    fetchFriends();
-  }, [fetchTodos, fetchFriends]);
+    checkProfile();
+  }, [checkProfile]);
+
+  useEffect(() => {
+    if (!loading) {
+      fetchTodos();
+      fetchFriends();
+    }
+  }, [loading, fetchTodos, fetchFriends]);
 
   const addTodo = async (text: string, friendId?: string) => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -93,6 +123,10 @@ const Index = () => {
       showError("Todo removed.");
     }
   };
+
+  if (loading) {
+    return <Spinner />;
+  }
 
   return (
     <main className="min-h-screen bg-background flex items-center justify-center p-4">
