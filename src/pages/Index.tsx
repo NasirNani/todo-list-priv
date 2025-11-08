@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from 'react-router-dom';
 import PullToRefresh from 'react-pull-to-refresh';
 import { TodoForm } from "@/components/TodoForm";
@@ -28,27 +28,25 @@ const Index = () => {
   const [myTodos, setMyTodos] = useState<Todo[]>([]);
   const [sharedByMeTodos, setSharedByMeTodos] = useState<Todo[]>([]);
   const [friends, setFriends] = useState<Profile[]>([]);
-  const mainRef = useRef<HTMLDivElement>(null);
 
-  const checkProfile = useCallback(async () => {
+  const checkUserAndProfile = useCallback(async () => {
     const { data: { user: currentUser } } = await supabase.auth.getUser();
-    if (!currentUser) {
-      navigate('/login');
-      return;
-    }
-    setUser(currentUser);
+    
+    if (currentUser) {
+      setUser(currentUser);
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('first_name')
+        .eq('id', currentUser.id)
+        .single();
 
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('first_name')
-      .eq('id', currentUser.id)
-      .single();
-
-    if (error || !profile || !profile.first_name) {
-      navigate('/profilesetup');
-    } else {
-      setLoading(false);
+      if (error || !profile || !profile.first_name) {
+        navigate('/profilesetup');
+      } else {
+        setLoading(false);
+      }
     }
+    // If currentUser is null, the Layout component will handle redirection.
   }, [navigate]);
 
   const fetchTodos = useCallback(async () => {
@@ -81,15 +79,15 @@ const Index = () => {
   };
 
   useEffect(() => {
-    checkProfile();
-  }, [checkProfile]);
+    checkUserAndProfile();
+  }, [checkUserAndProfile]);
 
   useEffect(() => {
-    if (!loading && user) {
+    if (user) {
       fetchTodos();
       fetchFriends();
     }
-  }, [loading, user, fetchTodos, fetchFriends]);
+  }, [user, fetchTodos, fetchFriends]);
 
   const addTodo = async (text: string, friendId?: string) => {
     if (!user) {
