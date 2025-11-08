@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from 'react-router-dom';
 import PullToRefresh from 'react-pull-to-refresh';
 import { TodoForm } from "@/components/TodoForm";
@@ -28,6 +28,7 @@ const Index = () => {
   const [myTodos, setMyTodos] = useState<Todo[]>([]);
   const [sharedByMeTodos, setSharedByMeTodos] = useState<Todo[]>([]);
   const [friends, setFriends] = useState<Profile[]>([]);
+  const mainRef = useRef<HTMLDivElement>(null);
 
   const checkProfile = useCallback(async () => {
     const { data: { user: currentUser } } = await supabase.auth.getUser();
@@ -145,36 +146,56 @@ const Index = () => {
     return <Spinner />;
   }
 
-  const isTouchDevice = 'ontouchstart' in window;
+  // More robust touch device detection
+  const isTouchDevice = (() => {
+    try {
+      return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    } catch (e) {
+      return false;
+    }
+  })();
 
   return (
-    <PullToRefresh onRefresh={handleRefresh} disabled={!isTouchDevice}>
-      <main className="min-h-screen bg-background flex flex-col items-center p-4 pt-8 md:pt-16">
-        <Card className="w-full max-w-md shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-2xl font-bold tracking-tight">
-              My Todo List
-            </CardTitle>
-            {!isTouchDevice && (
-              <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={isRefreshing}>
-                <RefreshCw className={`h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`} />
-              </Button>
+    <div className="min-h-screen bg-background flex flex-col items-center p-4 pt-8 md:pt-16">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-2xl font-bold tracking-tight">
+            My Todo List
+          </CardTitle>
+          {!isTouchDevice && (
+            <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={isRefreshing}>
+              <RefreshCw className={`h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center space-y-4">
+            <TodoForm addTodo={addTodo} friends={friends} />
+            {isTouchDevice ? (
+              <PullToRefresh onRefresh={handleRefresh} disabled={false}>
+                <div className="w-full">
+                  <TodoList
+                    todos={myTodos}
+                    toggleTodo={toggleTodo}
+                    deleteTodo={deleteTodo}
+                  />
+                  <SharedTodoList todos={sharedByMeTodos} />
+                </div>
+              </PullToRefresh>
+            ) : (
+              <div className="w-full">
+                <TodoList
+                  todos={myTodos}
+                  toggleTodo={toggleTodo}
+                  deleteTodo={deleteTodo}
+                />
+                <SharedTodoList todos={sharedByMeTodos} />
+              </div>
             )}
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col items-center space-y-4">
-              <TodoForm addTodo={addTodo} friends={friends} />
-              <TodoList
-                todos={myTodos}
-                toggleTodo={toggleTodo}
-                deleteTodo={deleteTodo}
-              />
-              <SharedTodoList todos={sharedByMeTodos} />
-            </div>
-          </CardContent>
-        </Card>
-      </main>
-    </PullToRefresh>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
