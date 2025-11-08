@@ -149,7 +149,7 @@ const Index = () => {
 
   return (
     <PullToRefresh onRefresh={handleRefresh} disabled={!isTouchDevice}>
-      <main className="min-h-screen bg-background flex items-center justify-center p-4">
+      <main className="min-h-screen bg-background flex flex-col items-center p-4 pt-8 md:pt-16">
         <Card className="w-full max-w-md shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-2xl font-bold tracking-tight">
