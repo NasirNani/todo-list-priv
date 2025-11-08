@@ -2,15 +2,27 @@ import { supabase } from "@/integrations/supabase/client";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Spinner } from "@/components/Spinner";
 
 const Login = () => {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Check for an existing session to redirect logged-in users
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        navigate('/');
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    // Listen for the sign-in event to redirect after a successful login
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        if (session) {
+        if (event === 'SIGNED_IN' && session) {
           navigate("/");
         }
       }
@@ -20,6 +32,10 @@ const Login = () => {
       authListener.subscription.unsubscribe();
     };
   }, [navigate]);
+
+  if (isLoading) {
+    return <Spinner />;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">

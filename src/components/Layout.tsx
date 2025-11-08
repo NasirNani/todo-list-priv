@@ -12,29 +12,36 @@ const Layout = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Actively fetch the session on component mount.
+    // This is more reliable, especially on mobile web views.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setIsLoading(false);
+    });
+
+    // Listen for auth state changes (login, logout, etc.)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      setIsLoading(false);
-      if (!session) {
-        navigate("/login");
-      }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, []);
+
+  useEffect(() => {
+    // Redirect to login if not loading and no session exists.
+    if (!isLoading && !session) {
+      navigate("/login");
+    }
+  }, [session, isLoading, navigate]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate("/login");
   };
 
-  if (isLoading) {
-    return <Spinner />;
-  }
-
-  if (!session) {
+  if (isLoading || !session) {
     return <Spinner />;
   }
 
