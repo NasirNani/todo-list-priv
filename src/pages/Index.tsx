@@ -145,6 +145,35 @@ const Index = () => {
     }
   };
 
+  const filteredTodos = useMemo(() => {
+    let updatedTodos = [...myTodos];
+
+    if (searchQuery.trim()) {
+      const lowerQuery = searchQuery.toLowerCase();
+      updatedTodos = updatedTodos.filter((todo) =>
+        todo.text.toLowerCase().includes(lowerQuery)
+      );
+    }
+
+    if (statusFilter === "active") {
+      updatedTodos = updatedTodos.filter((todo) => !todo.completed);
+    } else if (statusFilter === "completed") {
+      updatedTodos = updatedTodos.filter((todo) => todo.completed);
+    }
+
+    updatedTodos.sort((a, b) => {
+      const diff = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      return sortOrder === "newest" ? -diff : diff;
+    });
+
+    return updatedTodos;
+  }, [myTodos, searchQuery, statusFilter, sortOrder]);
+
+  const completedCount = useMemo(
+    () => myTodos.filter((todo) => todo.completed).length,
+    [myTodos]
+  );
+
   if (loading) {
     return <Spinner />;
   }
