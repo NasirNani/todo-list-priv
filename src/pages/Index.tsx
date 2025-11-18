@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from 'react-router-dom';
 import PullToRefresh from 'react-pull-to-refresh';
 import { TodoForm } from "@/components/TodoForm";
 import { TodoList } from "@/components/TodoList";
 import { SharedTodoList } from "@/components/SharedTodoList";
+import { TodoStats } from "@/components/TodoStats";
+import { TodoFilters, type TodoSortOrder, type TodoStatusFilter } from "@/components/TodoFilters";
 import {
   Card,
   CardContent,
@@ -28,6 +30,9 @@ const Index = () => {
   const [myTodos, setMyTodos] = useState<Todo[]>([]);
   const [sharedByMeTodos, setSharedByMeTodos] = useState<Todo[]>([]);
   const [friends, setFriends] = useState<Profile[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<TodoStatusFilter>("all");
+  const [sortOrder, setSortOrder] = useState<TodoSortOrder>("newest");
 
   const checkUserAndProfile = useCallback(async () => {
     const { data: { user: currentUser } } = await supabase.auth.getUser();
@@ -153,6 +158,35 @@ const Index = () => {
     }
   })();
 
+  const filteredTodos = useMemo(() => {
+    let updatedTodos = [...myTodos];
+
+    if (searchQuery.trim()) {
+      const lowerQuery = searchQuery.toLowerCase();
+      updatedTodos = updatedTodos.filter((todo) =>
+        todo.text.toLowerCase().includes(lowerQuery)
+      );
+    }
+
+    if (statusFilter === "active") {
+      updatedTodos = updatedTodos.filter((todo) => !todo.completed);
+    } else if (statusFilter === "completed") {
+      updatedTodos = updatedTodos.filter((todo) => todo.completed);
+    }
+
+    updatedTodos.sort((a, b) => {
+      const diff = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      return sortOrder === "newest" ? -diff : diff;
+    });
+
+    return updatedTodos;
+  }, [myTodos, searchQuery, statusFilter, sortOrder]);
+
+  const completedCount = useMemo(
+    () => myTodos.filter((todo) => todo.completed).length,
+    [myTodos]
+  );
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center p-4 pt-8 md:pt-16">
       <Card className="w-full max-w-md shadow-lg">
@@ -169,11 +203,20 @@ const Index = () => {
         <CardContent>
           <div className="flex flex-col items-center space-y-4">
             <TodoForm addTodo={addTodo} friends={friends} />
+            <TodoStats total={myTodos.length} completed={completedCount} shared={sharedByMeTodos.length} />
+            <TodoFilters
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              sortOrder={sortOrder}
+              onSortOrderChange={setSortOrder}
+            />
             {isTouchDevice ? (
               <PullToRefresh onRefresh={handleRefresh} disabled={false}>
                 <div className="w-full">
                   <TodoList
-                    todos={myTodos}
+                    todos={filteredTodos}
                     toggleTodo={toggleTodo}
                     deleteTodo={deleteTodo}
                   />
@@ -183,7 +226,7 @@ const Index = () => {
             ) : (
               <div className="w-full">
                 <TodoList
-                  todos={myTodos}
+                  todos={filteredTodos}
                   toggleTodo={toggleTodo}
                   deleteTodo={deleteTodo}
                 />
